@@ -1,64 +1,49 @@
-name: RDP (Ngrok)
-
-on: 
+# ------------------------------------ #
+#       Made By Anli V.1.0.0           #
+# ------------------------------------ #
+name: My Python Application
+# ------------------------------------ #
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
   workflow_dispatch:
-    inputs:
-      authtoken:
-        description: 'Ngrok Auth Token'
-        required: true
-      tunnelservers:
-        description: 'Ngrok Tunnel Servers (us, eu, ap, au, sa, jp or in)'
-        default: 'us'
-        required: true
-      password:
-        description: 'Password (minimum 8-10 with numbers and characters) leave blank if you want to use automatic password)'
-
+# ------------------------------------ #
 jobs:
-  build:
-    if: github.event.inputs.tunnelservers == 'us' || github.event.inputs.tunnelservers == 'eu' || github.event.inputs.tunnelservers == 'ap' || github.event.inputs.tunnelservers == 'au' || github.event.inputs.tunnelservers == 'sa' || github.event.inputs.tunnelservers == 'jp' || github.event.inputs.tunnelservers == 'in'
-    runs-on: windows-latest
-    timeout-minutes: 9999
-
+  Build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.9, 3.8, 3.7, 3.6, 3.5]
     steps:
-    - uses: actions/checkout@v2
-    - name: Download Ngrok & NSSM
+# ------------------------------------ #
+    - name: Checkout Code
+      uses: actions/checkout@v2
+# ------------------------------------ #
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+# ------------------------------------ #
+    - name: Install Dependencies
       run: |
-        Invoke-WebRequest https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-windows-amd64.zip -OutFile ngrok.zip
-        Invoke-WebRequest https://raw.githubusercontent.com/manish7088/rdpnew/main/Files/nssm.exe -OutFile nssm.exe
-        Invoke-WebRequest https://raw.githubusercontent.com/manish7088/rdpnew/main/NGROK-Setup.bat -OutFile NGROK-Setup.bat
-        Invoke-WebRequest https://raw.githubusercontent.com/manish7088/rdpnew/main/Files/t.bat -OutFile t.bat
-        Expand-Archive ngrok.zip
-    - name: Copy NSSM & Ngrok to Windows Directory.
-      run: | 
-        copy nssm.exe C:\Windows\System32
-        copy ngrok\ngrok.exe C:\Windows\System32
-    - name: Mask Token
-      shell: bash
+        sudo apt-get update
+        sudo apt-get install -y unzip openjdk-8-jre-headless xvfb libxi6 libgconf-2-4
+# ------------------------------------ #
+    - name: Download Chrome Driver
       run: |
-        _Token=$(jq -r '.inputs.authtoken' $GITHUB_EVENT_PATH)
-        echo ::add-mask::$_Token
-        echo NGROK_TOKEN="$_Token" >> $GITHUB_ENV
-    - name: Mask Custom Password
-      if: "!github.event.inputs.password == ''"
-      shell: bash
+        sudo apt-get -y update
+        sudo apt-get -y install google-chrome-stable
+        wget -N https://chromedriver.storage.googleapis.com/92.0.4515.107/chromedriver_linux64.zip -P ~/
+        unzip ~/chromedriver_linux64.zip -d ~/
+        rm ~/chromedriver_linux64.zip
+        sudo mv -f ~/chromedriver /usr/local/bin/chromedriver
+        sudo chown root:root /usr/local/bin/chromedriver
+        sudo chmod 0755 /usr/local/bin/chromedriver
+        pip install selenium
+# ------------------------------------ #
+    - name: Mulai Enjoy
       run: |
-        _Password=$(jq -r '.inputs.password' $GITHUB_EVENT_PATH)
-        echo ::add-mask::$_Password
-        echo Password="$_Password" >> $GITHUB_ENV
-    - name: Connect your NGROK account
-      run: .\ngrok\ngrok.exe authtoken ${{ env.NGROK_TOKEN }}
-    - name: Download Important Files & Make YML file for NGROK.
-      run: |
-        Invoke-WebRequest https://raw.githubusercontent.com/manish7088/rdpnew/main/NGROK-RG.bat -OutFile NGROK-RG.bat
-        start NGROK-RG.bat "${{ github.event.inputs.tunnelservers }}"
-    - name: Enable RDP Access.
-      run: | 
-        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server'-name "fDenyTSConnections" -Value 0
-        Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
-        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "UserAuthentication" -Value 1
-    - name: Create Tunnel
-      run: sc start ngrok
-    - name: Account for Connect to your RDP.
-      run: cmd /c NGROK-Setup.bat `${{ env.Password }}
-    - name: Keep Alive.
-      run: ./t.bat
+        python3 kesatu.py
+# ------------------------------------ #
